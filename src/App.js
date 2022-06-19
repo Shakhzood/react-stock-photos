@@ -1,5 +1,5 @@
 import "./App.css";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FaSearch } from "react-icons/fa";
 import Photo from "./Photo";
 import uuid from "react-uuid";
@@ -15,8 +15,10 @@ const searchUrl = "https://api.unsplash.com/search/photos";
 function App() {
   const [loading, setLoading] = useState(false);
   const [photos, setPhotos] = useState([]);
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useState(1);
   const [query, setQuery] = useState("");
+  const mounted = useRef(false);
+  const [newImages, setNewImages] = useState(false);
 
   const fetchImages = async () => {
     setLoading(true);
@@ -43,9 +45,10 @@ function App() {
           return [...oldPhotos, ...data];
         }
       });
-      console.log(data);
+      setNewImages(false);
       setLoading(false);
     } catch (error) {
+      setNewImages(false);
       setLoading(false);
       console.log(error);
     }
@@ -53,24 +56,52 @@ function App() {
 
   useEffect(() => {
     fetchImages();
+    // eslint-disable-next-line
   }, [page]);
 
   useEffect(() => {
-    const event = window.addEventListener("scroll", () => {
-      if (
-        !loading &&
-        window.innerHeight + window.scrollY >= document.body.scrollHeight - 2
-      ) {
-        setPage((oldPage) => {
-          return oldPage + 1;
-        });
-      }
-    });
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+
+    if (!newImages) return;
+    if (loading) return;
+    setPage((oldPage) => oldPage + 1);
+  }, [newImages]);
+
+  const event = () => {
+    if (window.innerHeight + window.scrollY >= document.body.scrollHeight - 2) {
+      setNewImages(true);
+    }
+  };
+  useEffect(() => {
+    window.addEventListener("scroll", event);
     return () => window.removeEventListener("scroll", event);
   }, []);
 
+  // useEffect(() => {
+  //   const event = window.addEventListener("scroll", () => {
+  //     if (
+  //       !loading &&
+  //       window.innerHeight + window.scrollY >= document.body.scrollHeight - 2
+  //     ) {
+  //       setPage((oldPage) => {
+  //         return oldPage + 1;
+  //       });
+  //     }
+  //   });
+  //   return () => window.removeEventListener("scroll", event);
+  //   // eslint-disable-next-line
+  // }, []);
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!query) return;
+    if (page === 1) {
+      fetchImages();
+      return;
+    }
     setPage(1);
   };
 
